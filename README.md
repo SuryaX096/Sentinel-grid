@@ -13,7 +13,7 @@ Autonomous multi-agent threat detection, semantic MITRE ATT&CK attribution, and 
 Enterprise digital infrastructures are subject to increasingly complex, high-velocity cybersecurity threats.
 Traditional security systems rely heavily on static, signature-based rules, which fail against novel zero-day attacks.
 When anomalies are detected, SOC analysts are often overwhelmed by alerts that lack semantic threat context.
-SentinelMind AI is an autonomous, agent-based platform designed to defend enterprise networks.
+SentinelGrid is an autonomous, agent-based platform designed to defend enterprise networks.
 It ingests raw network connection flows and classifies anomalies using an Isolation Forest ML model.
 It then semantically maps detected threats to known MITRE ATT&CK techniques using ChromaDB vector search.
 High-fidelity alerts are validated using Google's Gemini 1.5 Flash LLM for cognitive confirmation.

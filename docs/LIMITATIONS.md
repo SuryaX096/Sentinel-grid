@@ -1,5 +1,5 @@
 # System Design Assumptions & Limitations
-**SentinelMind AI - Cyber Resilience Platform (Prototype)**
+**SentinelGrid - Cyber Resilience Platform (Prototype)**
 
 Every prototype makes design trade-offs to demonstrate feasibility within a short timeframe. Below is an honest, comprehensive list of the constraints, mock aspects, and architectural limitations of this system.
 

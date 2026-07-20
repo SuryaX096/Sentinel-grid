@@ -1,6 +1,6 @@
-# Contributing to SentinelMind AI
+# Contributing to SentinelGrid
 
-Thank you for your interest in contributing to the SentinelMind AI Agentic Cyber Resilience Platform! To ensure code quality, security, and maintainability, please adhere to the following guidelines.
+Thank you for your interest in contributing to the SentinelGrid Agentic Cyber Resilience Platform! To ensure code quality, security, and maintainability, please adhere to the following guidelines.
 
 ## Code of Conduct
 - Be respectful, professional, and collaborative.

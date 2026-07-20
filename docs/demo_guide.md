@@ -1,6 +1,6 @@
-# SentinelMind AI — Hackathon Demo Guide & Playbook
+# SentinelGrid — Hackathon Demo Guide & Playbook
 
-This document prepares you to present a flawless, high-impact demonstration of the SentinelMind AI platform to hackathon judges. It includes startup sequences, checklist flows, backup/offline procedures, talking points, and answers to common technical questions.
+This document prepares you to present a flawless, high-impact demonstration of the SentinelGrid platform to hackathon judges. It includes startup sequences, checklist flows, backup/offline procedures, talking points, and answers to common technical questions.
 
 ---
 
@@ -71,7 +71,7 @@ Refresh the Streamlit dashboard to show the populated mock SOC feed instantly.
 
 *   **"Semi-Supervised" Advantage:** We don't train our model on labeled attack signatures (which change daily). We train on *normal behavior*. Anything else is anomalous, making it native to zero-day identification.
 *   **Natural Language Bridge:** We solve the "So What?" of ML alerts. Translating connection statistics into prose descriptions allows ChromaDB vector similarity to map anomalies directly to MITRE ATT&CK concepts.
-*   **Gated Blast-Radius Containment:** Full automation is dangerous. SentinelMind AI enforces automated execution only for low-impact containment (like snapshotting VMs) while gating high-impact containment (like blocking database IPs) behind human-in-the-loop approvals.
+*   **Gated Blast-Radius Containment:** Full automation is dangerous. SentinelGrid enforces automated execution only for low-impact containment (like snapshotting VMs) while gating high-impact containment (like blocking database IPs) behind human-in-the-loop approvals.
 *   **Audit-Trail Compliance:** Every action taken by any agent is logged in an immutable-style audit trail, critical for regulatory SOC audits.
 
 ---
@@ -79,7 +79,7 @@ Refresh the Streamlit dashboard to show the populated mock SOC feed instantly.
 ## 5. Common Judge Questions & Answers
 
 *   **Q1: How does your Isolation Forest model handle concept drift?**
-    *   *A:* In production, connection behaviors change over time. SentinelMind AI is structured to run daily retrains on verified normal flows, updating `model.pkl` and its SHA-256 integrity hash programmatically without interrupting API services.
+    *   *A:* In production, connection behaviors change over time. SentinelGrid is structured to run daily retrains on verified normal flows, updating `model.pkl` and its SHA-256 integrity hash programmatically without interrupting API services.
 *   **Q2: Microservice calls add communication latency. How do you scale this?**
     *   *A:* While localhost FastAPI REST is excellent for microservice decoupling in a prototype, a production enterprise pipeline would combine these agent scripts inside an asynchronous worker consumer listening to a distributed broker like Apache Kafka.
 *   **Q3: Why did you use the NSL-KDD dataset? It is old.**

@@ -1,1 +1,1 @@
-# SentinelMind AI - Cyber Resilience Platform
+# SentinelGrid - Cyber Resilience Platform

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the SentinelMind AI Cyber Resilience Platform will be documented in this file.
+All notable changes to the SentinelGrid Cyber Resilience Platform will be documented in this file.
 
 ## [1.2.0] - 2026-07-20
 ### Added
@@ -26,4 +26,4 @@ All notable changes to the SentinelMind AI Cyber Resilience Platform will be doc
 
 ## [1.0.0] - 2026-07-17
 ### Added
-- Initial release of SentinelMind AI platform containing Hero Agent (anomaly detection), Attribution Agent (MITRE vector store classification), and Supporting Agent (playbook incident responder).
+- Initial release of SentinelGrid platform containing Hero Agent (anomaly detection), Attribution Agent (MITRE vector store classification), and Supporting Agent (playbook incident responder).

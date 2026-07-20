@@ -32,7 +32,7 @@ def create_pitch_deck():
         rect.line.fill.background() # No border
         # Send to back is done implicitly when added first
 
-    def add_slide_header(slide, title_text, category_text="SENTINELMIND AI"):
+    def add_slide_header(slide, title_text, category_text="SENTINELGRID"):
         # Header category text
         txBox_cat = slide.shapes.add_textbox(Inches(0.75), Inches(0.4), Inches(11.83), Inches(0.3))
         tf_cat = txBox_cat.text_frame
@@ -74,7 +74,7 @@ def create_pitch_deck():
     tf1.margin_left = tf1.margin_right = tf1.margin_top = tf1.margin_bottom = 0
 
     p1 = tf1.paragraphs[0]
-    p1.text = "SentinelMind AI"
+    p1.text = "SentinelGrid"
     p1.font.size = Pt(64)
     p1.font.bold = True
     p1.font.color.rgb = TITLE_COLOR
@@ -133,7 +133,7 @@ def create_pitch_deck():
     tf2_col2.margin_left = tf2_col2.margin_right = tf2_col2.margin_top = tf2_col2.margin_bottom = 0
 
     p_c2_title = tf2_col2.paragraphs[0]
-    p_c2_title.text = "🛡️ The SentinelMind AI Solution"
+    p_c2_title.text = "🛡️ The SentinelGrid Solution"
     p_c2_title.font.size = Pt(20)
     p_c2_title.font.bold = True
     p_c2_title.font.color.rgb = TITLE_COLOR
@@ -603,10 +603,10 @@ def create_pitch_deck():
         p_line.space_after = Pt(12)
 
 
-    # ================= Slide 9: Why SentinelMind AI Wins =================
+    # ================= Slide 9: Why SentinelGrid Wins =================
     slide9 = prs.slides.add_slide(blank_slide_layout)
     apply_dark_background(slide9)
-    add_slide_header(slide9, "Platform Architecture Highlights", "SentinelMind Edge")
+    add_slide_header(slide9, "Platform Architecture Highlights", "SentinelGrid Edge")
 
     # Four small grid blocks for highlights
     card_w = Inches(5.6)

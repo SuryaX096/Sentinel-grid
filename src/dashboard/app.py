@@ -21,7 +21,7 @@ ASSETS_PATH = os.path.join(WORKSPACE_DIR, "src", "supporting_agent", "asset_inve
 
 # Set Page Config
 st.set_page_config(
-    page_title="SentinelMind AI - Cyber Resilience Platform",
+    page_title="SentinelGrid - Cyber Resilience Platform",
     page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -143,7 +143,7 @@ st.sidebar.markdown(
     """,
     unsafe_allow_html=True
 )
-st.sidebar.title("SentinelMind AI")
+st.sidebar.title("SentinelGrid")
 st.sidebar.markdown("**Agentic Cyber Resilience Platform**")
 st.sidebar.markdown("---")
 
