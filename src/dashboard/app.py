@@ -8,6 +8,7 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 from datetime import datetime
+from streamlit_autorefresh import st_autorefresh
 
 # Agent API URLs
 SUPPORTING_API_URL = "http://127.0.0.1:8003"
@@ -121,6 +122,9 @@ st.sidebar.markdown("---")
 refresh_rate = st.sidebar.slider("Auto-refresh interval (seconds)", min_value=1, max_value=10, value=3)
 if st.sidebar.button("Manual Refresh"):
     st.rerun()
+
+# Wire up the auto-refresh timer
+st_autorefresh(interval=refresh_rate * 1000, key="auto_refresh_timer")
 
 # --- HEADER SECTION ---
 st.title("🛡️ SOC Threat Resilience Console")

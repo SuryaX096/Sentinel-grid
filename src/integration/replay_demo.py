@@ -33,12 +33,15 @@ def run_replay(interval_sec: float = 1.5, max_records: int = 50):
     print(f"Available: Normal={len(normal_samples)}, Attacks/Anomalies={len(attack_samples)}")
     
     # We want a clean stream containing normal connections with periodic anomalies
-    # Let's construct a sample list of 40 normal records and 10 attack records
+    # Let's construct a sample list of normal records and attack records safely
     num_attacks = min(10, len(attack_samples))
-    num_normals = min(max_records - num_attacks, len(normal_samples))
+    if max_records < num_attacks:
+        num_attacks = max_records
+    num_normals = max(0, min(max_records - num_attacks, len(normal_samples)))
+    num_attacks = max_records - num_normals
     
-    sampled_normal = normal_samples.sample(n=num_normals, random_state=42)
-    sampled_attack = attack_samples.sample(n=num_attacks, random_state=42)
+    sampled_normal = normal_samples.sample(n=num_normals, random_state=42) if num_normals > 0 else pd.DataFrame()
+    sampled_attack = attack_samples.sample(n=num_attacks, random_state=42) if num_attacks > 0 else pd.DataFrame()
     
     # Interleave them so anomalies appear periodically (every 4-5 packets)
     demo_df = pd.concat([sampled_normal, sampled_attack]).sample(frac=1.0, random_state=10).reset_index(drop=True)
