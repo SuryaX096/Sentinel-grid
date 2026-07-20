@@ -1,0 +1,74 @@
+{
+  "assets": [
+    {
+      "entity": "database-prod-01.internal",
+      "ip_address": "192.168.1.10",
+      "criticality": "critical",
+      "owner": "Database Team",
+      "known_cves": ["CVE-2021-44228", "CVE-2023-38606"]
+    },
+    {
+      "entity": "api-gateway-web",
+      "ip_address": "192.168.1.20",
+      "criticality": "high",
+      "owner": "Web Operations",
+      "known_cves": ["CVE-2022-22965"]
+    },
+    {
+      "entity": "10.0.0.4",
+      "ip_address": "10.0.0.4",
+      "criticality": "critical",
+      "owner": "Active Directory Admin",
+      "known_cves": ["CVE-2020-1472"]
+    },
+    {
+      "entity": "192.168.1.105",
+      "ip_address": "192.168.1.105",
+      "criticality": "medium",
+      "owner": "Engineering Workstation",
+      "known_cves": []
+    },
+    {
+      "entity": "192.168.1.150",
+      "ip_address": "192.168.1.150",
+      "criticality": "low",
+      "owner": "Test Sandbox VM",
+      "known_cves": ["CVE-2018-11776"]
+    },
+    {
+      "entity": "workstation-hr-12",
+      "ip_address": "192.168.1.132",
+      "criticality": "low",
+      "owner": "HR Dept",
+      "known_cves": []
+    },
+    {
+      "entity": "10.0.2.15",
+      "ip_address": "10.0.2.15",
+      "criticality": "low",
+      "owner": "Guest VM Sandbox",
+      "known_cves": []
+    },
+    {
+      "entity": "tcp_session_from_IP",
+      "ip_address": "dynamic",
+      "criticality": "medium",
+      "owner": "General Network",
+      "known_cves": []
+    },
+    {
+      "entity": "udp_session_from_IP",
+      "ip_address": "dynamic",
+      "criticality": "low",
+      "owner": "General Network",
+      "known_cves": []
+    },
+    {
+      "entity": "icmp_session_from_IP",
+      "ip_address": "dynamic",
+      "criticality": "low",
+      "owner": "General Network",
+      "known_cves": []
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AlertSchema",
+  "type": "object",
+  "properties": {
+    "alert_id": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "entity": {
+      "type": "string"
+    },
+    "anomaly_score": {
+      "type": "number"
+    },
+    "features_flagged": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attack_technique": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "technique_confidence": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "response_action": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "response_status": {
+      "type": "string"
+    },
+    "audit_trail": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "timestamp": {
+            "type": "string"
+          },
+          "agent": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "timestamp",
+          "agent",
+          "action",
+          "notes"
+        ]
+      }
+    }
+  },
+  "required": [
+    "alert_id",
+    "timestamp",
+    "entity",
+    "anomaly_score",
+    "features_flagged",
+    "attack_technique",
+    "technique_confidence",
+    "response_action",
+    "response_status",
+    "audit_trail"
+  ]
+}

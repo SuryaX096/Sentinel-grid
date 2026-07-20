@@ -1,0 +1,65 @@
+[
+  {
+    "technique_id": "T1498",
+    "name": "Network Service Denial",
+    "tactics": ["Impact"],
+    "description": "Adversaries may perform Network Service Denial attacks to disrupt access to services, systems, or networks. By flooding a target network with traffic (such as TCP SYN, ICMP echo, or UDP packets), they consume network bandwidth or device resources (like connection tables), preventing legitimate traffic from being processed. This is typified by massive volume spikes (high source bytes, massive flow count in short windows).",
+    "detection_indicators": ["serror_rate", "srv_serror_rate", "count", "src_bytes", "rerror_rate", "srv_rerror_rate", "smurf", "neptune", "back"]
+  },
+  {
+    "technique_id": "T1499",
+    "name": "Endpoint Denial of Service",
+    "tactics": ["Impact"],
+    "description": "Adversaries may perform Endpoint Denial of Service attacks to degrade or shut down target host systems. Techniques include exploiting software vulnerabilities (like sending malformed packet fragments, tear-drop attacks) or exhausting host resources (CPU, RAM). This is characterized by fragmented packets, high wrong_fragment values, and elevated connection error rates on individual endpoints.",
+    "detection_indicators": ["wrong_fragment", "land", "teardrop", "pod", "duration", "serror_rate"]
+  },
+  {
+    "technique_id": "T1046",
+    "name": "Network Service Scanning",
+    "tactics": ["Discovery"],
+    "description": "Adversaries may attempt to build a map of target network services by scanning ports and checking protocol responses. Port scanning involves sending packets to multiple ports on a host to identify active services (like Web, FTP, SSH). This is typified by high connections to different services on the same host, and high rates of connection rejection (high rerror_rate or diff_srv_rate).",
+    "detection_indicators": ["diff_srv_rate", "dst_host_diff_srv_rate", "dst_host_srv_count", "satan", "nmap", "portsweep"]
+  },
+  {
+    "technique_id": "T1595",
+    "name": "Active Scanning",
+    "tactics": ["Reconnaissance"],
+    "description": "Adversaries may execute active reconnaissance scanning, such as sweeping IP ranges, to identify active hosts on a network (ping sweeps, ICMP sweeps). This is typified by a high count of connection attempts to a single service across multiple destination hosts in a short time window.",
+    "detection_indicators": ["srv_diff_host_rate", "dst_host_srv_diff_host_rate", "ipsweep", "mscan", "saint"]
+  },
+  {
+    "technique_id": "T1110",
+    "name": "Brute Force",
+    "tactics": ["Credential Access"],
+    "description": "Adversaries may use brute force attacks to guess passwords and gain access to local accounts. This involves making numerous authentication attempts on remote services (like FTP, SSH, Telnet) in rapid succession. Characterized by high connection frequency, high count of failed login attempts (num_failed_logins), and a lack of successful session establishment.",
+    "detection_indicators": ["num_failed_logins", "hot", "logged_in", "guess_passwd", "count", "duration"]
+  },
+  {
+    "technique_id": "T1190",
+    "name": "Exploit Public-Facing Application",
+    "tactics": ["Initial Access"],
+    "description": "Adversaries may exploit vulnerabilities in public-facing applications (such as web servers or email servers) to execute arbitrary commands or gain access. This is characterized by highly irregular payload byte counts (very high src_bytes or dst_bytes for standard ports), long execution durations, or access to sensitive services without standard logging indicators.",
+    "detection_indicators": ["src_bytes", "dst_bytes", "duration", "hot", "phf", "imap"]
+  },
+  {
+    "technique_id": "T1133",
+    "name": "External Remote Services",
+    "tactics": ["Initial Access", "Persistence"],
+    "description": "Adversaries may leverage remote access services (like FTP, VPN, or RDP) to log into local systems from external environments. This is often flagged when there are anomalies in service duration, unusual flags indicating connection teardowns, or access to administrative accounts from external segments.",
+    "detection_indicators": ["logged_in", "duration", "service", "flag", "warezclient", "warezmaster"]
+  },
+  {
+    "technique_id": "T1068",
+    "name": "Exploitation for Privilege Escalation",
+    "tactics": ["Privilege Escalation"],
+    "description": "Adversaries may exploit local software vulnerabilities on an endpoint to escalate permissions from a standard user account to SYSTEM or ROOT access. This is typified by successful logins followed immediately by shell spawning, buffer overflows, or unauthorized access to system files.",
+    "detection_indicators": ["root_shell", "num_compromised", "su_attempted", "buffer_overflow", "loadmodule", "perl"]
+  },
+  {
+    "technique_id": "T1548",
+    "name": "Abuse Elevation Control Mechanism",
+    "tactics": ["Privilege Escalation", "Defense Evasion"],
+    "description": "Adversaries may bypass elevation controls (like SUID/SGID binaries, UAC, or sudo configurations) to run processes with elevated permissions. Characterized by anomalous local files accessed (num_access_files), root shells spawned, or su commands attempted in non-standard user profiles.",
+    "detection_indicators": ["su_attempted", "root_shell", "num_access_files", "num_shells", "rootkit", "ps"]
+  }
+]

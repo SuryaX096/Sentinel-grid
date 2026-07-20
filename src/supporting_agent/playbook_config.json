@@ -1,0 +1,34 @@
+{
+  "actions": [
+    {
+      "name": "log_and_flag",
+      "description": "Log the anomalous flow and flag for security analyst review.",
+      "blast_radius": "low",
+      "auto_execute": true
+    },
+    {
+      "name": "snapshot_vm_state",
+      "description": "Trigger an automated virtual machine snapshot of the target asset for forensics.",
+      "blast_radius": "low",
+      "auto_execute": true
+    },
+    {
+      "name": "rate_limit_ip",
+      "description": "Rate-limit the offending source IP address at the firewall.",
+      "blast_radius": "low-medium",
+      "auto_execute": true
+    },
+    {
+      "name": "revoke_session",
+      "description": "Revoke active authentication sessions for user-associated anomalies.",
+      "blast_radius": "medium",
+      "auto_execute": false
+    },
+    {
+      "name": "isolate_endpoint",
+      "description": "Isolate the infected endpoint or VM from the network.",
+      "blast_radius": "high",
+      "auto_execute": false
+    }
+  ]
+}

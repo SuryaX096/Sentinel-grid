@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+.venv/
+data/raw/
+data/processed/
+src/hero_agent/model.pkl
+src/attribution_agent/chroma_store/
+*.db
+pipeline_alerts.json
