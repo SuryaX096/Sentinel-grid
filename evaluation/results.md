@@ -1,7 +1,6 @@
-
 ## Hero Agent Anomaly Detection Evaluation
 
-**Date:** 2026-07-18
+**Date:** 2026-07-20
 **Model Type:** Isolation Forest (trained on normal traffic only)
 **Tuned Score Threshold:** `0.4800`
 
@@ -32,10 +31,20 @@
 | **R2L (Unauthorized Access)** | 2887 | 19.12% | Credential Abuse Blocking |
 | **U2R (Privilege Escalation)** | 67 | 31.34% | Endpoint Isolation Escalation |
 
+## Performance Summary Table
+
+| Metric | Score (Value) | Percentage | Description |
+|---|---|---|---|
+| **Precision** | `0.9582` | 95.82% | Proportion of flagged alerts that were actual attacks |
+| **Recall (Sensitivity)** | `0.7447` | 74.47% | Proportion of actual attacks successfully detected |
+| **F1-Score** | `0.8381` | - | Harmonic mean of precision and recall |
+| **False Positive Rate (FPR)** | `0.0429` | 4.29% | Rate at which normal traffic is misidentified as anomalous |
+| **False Negative Rate (FNR)** | `0.2553` | 25.53% | Rate at which attacks slip through undetected |
+
+#
 
 ## Attribution Agent Threat Classification Evaluation
-
-**Date:** 2026-07-18
+**Date:** 2026-07-20
 **Attribution Mode:** Local Semantic Similarity Search (ChromaDB candidate retrieval)
 **Embedding Model:** `all-MiniLM-L6-v2`
 **Benchmark Size:** 20 Scenarios

@@ -20,15 +20,17 @@ chroma_client = None
 collection = None
 has_gemini_api = False
 
+from typing import Optional
+
 class AlertPayload(BaseModel):
     alert_id: str
     timestamp: str
     entity: str
     anomaly_score: float
     features_flagged: list
-    attack_technique: str = None
-    technique_confidence: float = None
-    response_action: str = None
+    attack_technique: Optional[str] = None
+    technique_confidence: Optional[float] = None
+    response_action: Optional[str] = None
     response_status: str
     audit_trail: list
 

@@ -8,6 +8,8 @@ from src.supporting_agent.orchestrator import Orchestrator
 app = FastAPI(title="Supporting Agent - Playbook Response API")
 orchestrator = Orchestrator()
 
+from typing import Optional
+
 # Reuse schema validator types for request
 class AlertPayload(BaseModel):
     alert_id: str
@@ -15,9 +17,9 @@ class AlertPayload(BaseModel):
     entity: str
     anomaly_score: float
     features_flagged: list
-    attack_technique: str = None
-    technique_confidence: float = None
-    response_action: str = None
+    attack_technique: Optional[str] = None
+    technique_confidence: Optional[float] = None
+    response_action: Optional[str] = None
     response_status: str
     audit_trail: list
 

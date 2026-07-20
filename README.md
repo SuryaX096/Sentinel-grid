@@ -1,313 +1,170 @@
 # SentinelGrid — Cyber Resilience Platform
-### Autonomous Multi-Agent Threat Detection, Semantic ATT&CK Attribution, and Gated Incident Response
-**ET AI Hackathon 2026 — Problem Statement 7 Submission**
 
----
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](#)
+[![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)](#)
+[![License](https://img.shields.io/badge/license-MIT-green)](#)
+[![FastAPI](https://img.shields.io/badge/framework-FastAPI-teal)](#)
+[![Streamlit](https://img.shields.io/badge/dashboard-Streamlit-red)](#)
 
-## 1. Project Overview
+Autonomous multi-agent threat detection, semantic MITRE ATT&CK attribution, and gated incident response.
 
-Enterprise digital infrastructures are subject to increasingly complex, high-velocity cybersecurity threats. Traditional security systems rely heavily on static, rule-based matching (like signature detection), which fails to identify novel zero-day exploits. Once an anomaly is detected, Security Operations Center (SOC) analysts are often overwhelmed by alerts that lack semantic context (e.g., matching the anomaly to specific threat tactics) and do not trigger immediate coordinated response actions.
+## Overview
 
-**SentinelMind AI** is an agentic cyber resilience platform designed to autonomously defend enterprise networks. Using a three-tier collaborative agent system, it ingests raw network connection flows, classifies anomalies using machine learning, attributes them semantically to known MITRE ATT&CK techniques, prioritizes response playbooks based on target asset values/CVEs, and enforces gated human-in-the-loop approvals for high-impact containment actions.
+Enterprise digital infrastructures are subject to increasingly complex, high-velocity cybersecurity threats.
+Traditional security systems rely heavily on static, signature-based rules, which fail against novel zero-day attacks.
+When anomalies are detected, SOC analysts are often overwhelmed by alerts that lack semantic threat context.
+SentinelMind AI is an autonomous, agent-based platform designed to defend enterprise networks.
+It ingests raw network connection flows and classifies anomalies using an Isolation Forest ML model.
+It then semantically maps detected threats to known MITRE ATT&CK techniques using ChromaDB vector search.
+High-fidelity alerts are validated using Google's Gemini 1.5 Flash LLM for cognitive confirmation.
+A third agent assesses asset vulnerability and CVE profiles to prioritize response playbooks.
+Critical containment actions (e.g., endpoint isolation) are queued for human-in-the-loop validation.
+This workflow ensures robust cyber resilience while preventing unauthorized automated disruption.
+All activities are recorded in a secure SQLite database and audited in an append-only transaction log.
+Security analysts monitor the operations and approve/reject responses via an interactive Streamlit UI.
 
----
+## Features
 
-## 2. Platform Architecture
+* **Machine Learning Anomaly Detection**: Employs an Isolation Forest model to detect outliers.
+* **Feature Statistical Profiling**: Flags abnormal fields using dynamical Z-score statistical limits.
+* **MITRE ATT&CK Translation**: Translates raw metrics to natural language for vector similarity search.
+* **Dual Threat Classification**: Validates candidate techniques using Gemini or local ChromaDB fallback.
+* **Contextual Risk Prioritization**: Computes risk score based on anomaly, asset weight, and active CVEs.
+* **Gated Human-in-the-Loop approval**: Pauses high-risk mitigation actions until explicit analyst sign-off.
+* **Append-Only Auditing**: Logs detailed execution steps for every agent run into alert audit trails.
+* **Active Replay Simulator**: Streams historical NSL-KDD flows to test detection and attribution.
+* **Responsive Streamlit SOC**: Dark-theme console with real-time refresh, metric cards, and charts.
+* **Robust Integrity Verification**: Verifies trained model weights on startup via SHA-256 validation.
+* **Microservice Architecture**: Implements decoupled FastAPI agents communicating via JSON schemas.
+* **Comprehensive Test Suite**: Includes integration tests verifying schema validation and API flows.
 
-The platform operates on a microservice architecture consisting of three FastAPI agent services, a shared SQLite database store, and an interactive Streamlit SOC console.
+## Architecture
+
+The platform employs a microservice structure of three cooperative FastAPI agents, a database, and Streamlit SOC.
 
 ```mermaid
 graph TD
-    %% Data Ingestion
-    A[Raw Network Flow Log / Replay] -->|Inference request| B(Hero Agent: detect_api)
-    
-    %% Hero Agent (ML Detection)
-    subgraph Hero Agent - Anomaly Detection (:8001)
-        B --> C{Isolation Forest Model}
-        C -->|Inlier / Normal| D[Log Connection & Resolve]
-        C -->|Anomaly detected| E[Calculate Z-Scores & Flag Features]
-    end
-    
-    %% Attribution Agent (Threat Intel)
-    E -->|JSON Alert Payload| F(Attribution Agent: attribute_api)
-    subgraph Attribution Agent - Threat Intel (:8002)
-        F --> G[feature_to_text: Translate features to sentence]
-        G --> H[ChromaDB persistent vector search]
-        H --> I{Gemini API configured?}
-        I -->|Yes| J[Gemini 1.5 Flash: CTI LLM Validation]
-        I -->|No| K[Local Semantic Similarity Top Candidate]
-        J --> L[Enrich Alert with ATT&CK Technique & Details]
-        K --> L
-    end
-    
-    %% Supporting Agent (Mitigation)
-    L -->|Enriched Alert| M(Supporting Agent: respond_api)
-    subgraph Supporting Agent - Orchestrator (:8003)
-        M --> N[Load asset_inventory.json & CVE profiles]
-        N --> O[Select playbook_config.json action by risk score]
-        O --> P{High Blast Radius / Auto-Execute?}
-        P -->|Low / Auto-Execute: true| Q[Update Status: executed]
-        P -->|High / Auto-Execute: false| R[Update Status: pending_approval]
-    end
-    
-    %% Operations Dashboard & SQLite DB
-    Q --> S[(SQLite alerts.db)]
-    R --> S
-    D --> S
-    
-    S --> T[Streamlit Dashboard SOC Console :8501]
-    T -->|Interactive Manual Approval / Override| U[Call approve_api]
-    U -->|Action executed/dismissed| S
+  Flow[Network Flow] --> Hero[Hero Agent: Detect :8001]
+  Hero -->|Anomaly| Intel[Attribution Agent: Intel :8002]
+  Intel -->|MITRE ATT&CK| Supp[Supporting Agent: Respond :8003]
+  Supp -->|Gated Actions| DB[(SQLite DB)]
+  DB <--> SOC[Streamlit Dashboard :8501]
+  SOC -->|Approve/Dismiss| Supp
+  Hero -.->|Isolation Forest| DB
+  Intel -.->|Gemini / ChromaDB| DB
+  Supp -.->|CVE Playbooks| DB
 ```
 
-### Alert Data Schema
-Every alert passing through the agent pipeline is strictly validated against a unified JSON schema containing the following required keys:
-*   `alert_id`: Unique identifier (UUID-based).
-*   `timestamp`: ISO-8601 UTC timestamp.
-*   `entity`: Target entity name (e.g. protocol or IP session).
-*   `anomaly_score`: Float value between `0.0` and `1.0` representing ML detection confidence.
-*   `features_flagged`: List of outlier connection metrics triggering the alert.
-*   `attack_technique`: Mapped MITRE ATT&CK technique name and ID.
-*   `technique_confidence`: Float value between `0.0` and `1.0` representing semantic search/LLM confidence.
-*   `response_action`: Planned mitigation playbook action.
-*   `response_status`: Current state (`normal`, `resolved`, `executed`, `pending_approval`, `pipeline_error`, `dismissed`).
-*   `audit_trail`: Sequential array of agent actions and timestamps.
+* **Hero Agent**: Classifies traffic flows into normal or anomalous, calculating outlier feature scores.
+* **Attribution Agent**: Searches ChromaDB for semantic mappings and validates using Gemini LLM.
+* **Supporting Agent**: Selects playbooks according to asset criticalities and active vulnerability profiles.
+* **Database (SQLite)**: Stores alerts and audit trials centrally to maintain the shared state.
+* **SOC Console**: Streamlit dashboard that visualizes active alerts and serves as the manual approval gate.
+* **JSON Schema**: Strict data contract defining required alert fields shared across the entire pipeline.
+* **Data Flow**: Sequential API calls that enrich network packet data from detection to final remediation.
 
----
+## Project Structure
 
-## 3. Platform Features
+```text
+cyber-resilience/
+├── evaluation/              # Scripts to evaluate detection & attribution accuracy
+├── src/
+│   ├── attribution_agent/   # MITRE index generation and semantic threat API
+│   ├── common/              # Schema validator, deck generator, mock generator
+│   ├── dashboard/           # Streamlit SOC interface source file
+│   ├── hero_agent/          # Isolation Forest training and inference detect API
+│   ├── integration/         # Ingestion pipeline and flow replay simulator
+│   └── supporting_agent/    # Asset inventories, playbooks, response API
+└── tests/                   # Unit and integration test suites
+```
 
-*   **Semi-Supervised ML Anomaly Detection:** Hero Agent establishes a normal network traffic baseline using an `IsolationForest` model. Unseen traffic is scored, and feature outliers are dynamically flagged using statistical Z-score thresholds relative to the baseline.
-*   **Dual-Mode Semantic Threat Attribution:** Attribution Agent translates abstract flagged features (e.g., `serror_rate`, `dst_host_diff_srv_rate`) into natural-language threat behavior. It queries a persistent vector database (ChromaDB) for candidate MITRE ATT&CK mappings. If a `GEMINI_API_KEY` is present, it validates findings using Google's Gemini 1.5 Flash LLM; otherwise, it falls back to local vector similarity metrics.
-*   **Context-Aware Risk Prioritization:** Supporting Agent scores threats using an integrated calculation combining the model's anomaly score, the asset's criticality weight (low, medium, high, critical), and a boost factor if the target asset has active known CVEs.
-*   **Gated Human-in-the-Loop Consoles:** High blast-radius response actions (e.g., `isolate_endpoint`, `revoke_session`) pause in `pending_approval` state, highlighting a red pulsing alert banner on the dashboard for analyst intervention.
-*   **Comprehensive Audit Logs:** An append-only audit trail records the timeline and reasoning of each agent's decisions, ensuring compliance and transparency.
+## Installation
 
----
-
-## 4. Installation & Virtual Environment Setup
-
-### 4.1 Creating the Virtual Environment
-To isolate the project dependencies and prevent library mismatches, set up a Python virtual environment:
+Install dependencies and prepare the python virtual environment:
 
 ```bash
-# 1. Clone the repository
+# Clone repository
 git clone https://github.com/SuryaX096/Cyber-resilience.git
 cd Cyber-resilience
 
-# 2. Create a virtual environment (Python 3.9+ recommended)
+# Create virtual environment
 python -m venv .venv
 
-# 3. Activate the virtual environment
-# On Windows (PowerShell):
+# Activate virtual environment (Windows)
 .venv\Scripts\Activate.ps1
-# On Windows (Command Prompt):
-.venv\Scripts\activate.bat
-# On macOS / Linux:
-source .venv/bin/activate
-```
 
-### 4.2 Installing Dependencies
-Install the pinned dependencies (including scikit-learn, streamlit, fastapi, chromadb, sentence-transformers, and streamlit-autorefresh):
-```bash
+# Install required libraries
 pip install --upgrade pip
 pip install -r requirements.txt
 ```
-*Note: The `sentence-transformers` library automatically installs PyTorch, which may require a download of up to 2GB depending on your platform.*
 
----
+## Run Project
 
-## 5. Environment Variables Configuration
-
-The platform can run out-of-the-box using default localhost configurations. To enable high-fidelity LLM validation and custom settings, copy the `.env.example` file to `.env` and configure:
+Execute these commands sequentially to prepare and run the multi-agent system:
 
 ```bash
-cp .env.example .env
-```
+# 1. Download data and train model
+python -m src.hero_agent.data_prep && python -m src.hero_agent.train_model
 
-### Configuration Parameters
-| Parameter | Default | Purpose |
-|-----------|---------|---------|
-| `GEMINI_API_KEY` | None | API key from Google AI Studio. Enables LLM threat validation mode. |
-| `HERO_AGENT_PORT` | `8001` | FastAPI port for Hero Agent Anomaly Detector. |
-| `ATTRIBUTION_AGENT_PORT` | `8002` | FastAPI port for Attribution Agent Threat Classifier. |
-| `SUPPORTING_AGENT_PORT` | `8003` | FastAPI port for Supporting Agent Response engine. |
-| `DB_PATH` | `alerts.db` | SQLite database file location. |
-
----
-
-## 6. Running the Project
-
-Follow these steps sequentially to prepare, build, and run the multi-agent platform.
-
-### Step 1: Pre-process Dataset & Train the ML Model
-Run the data preparation pipeline to download the NSL-KDD dataset, map attack categories, encode fields, and train the Isolation Forest model (calculates a SHA-256 integrity checksum on save):
-```bash
-# Download and split NSL-KDD
-python -m src.hero_agent.data_prep
-
-# Train model and generate checksum
-python -m src.hero_agent.train_model
-```
-
-### Step 2: Build the MITRE ATT&CK Semantic Index
-Embed the curated threat technique catalog into the persistent ChromaDB local database using sentence embeddings:
-```bash
+# 2. Build ChromaDB semantic vector index
 python -m src.attribution_agent.build_mitre_index
-```
 
-### Step 3: Start the Agent Microservices
-Run the three FastAPI agent servers in separate terminals (ensure your virtual environment is active in each):
-
-```bash
-# Terminal 1: Hero Agent Anomaly Detector (Runs on Port 8001)
+# 3. Start APIs (detect: 8001, attribute: 8002, respond: 8003)
 python -m src.hero_agent.detect_api
-
-# Terminal 2: Attribution Agent Threat Classifier (Runs on Port 8002)
 python -m src.attribution_agent.attribute_api
-
-# Terminal 3: Supporting Agent Response Engine (Runs on Port 8003)
 python -m src.supporting_agent.respond_api
-```
 
-### Step 4: Launch the SOC Console Dashboard
-Launch the Streamlit analytics interface:
-```bash
+# 4. Run dashboard & simulator
 streamlit run src/dashboard/app.py
-```
-*The dashboard will be active in your browser at `http://localhost:8501`.*
-
-### Step 5: Start the Traffic Replay Simulator
-In another terminal session, stream network flows into the pipeline to simulate real-time traffic:
-```bash
-# Streams 30 connections with a 1.5s interval
 python -m src.integration.replay_demo --count 30 --interval 1.5
 ```
 
----
+## Dashboard Preview
 
-## 7. API Reference & Schemas
+The Streamlit operations console offers full visibility into active and historic alerts:
 
-### 7.1 Hero Agent (`/detect`)
-*   **Path:** `POST http://127.0.0.1:8001/detect`
-*   **Payload Example:**
-    ```json
-    {
-      "duration": 0.0, "protocol_type": "tcp", "service": "http", "flag": "SF",
-      "src_bytes": 215.0, "dst_bytes": 4507.0, "land": 0, "wrong_fragment": 0,
-      "urgent": 0, "hot": 0, "num_failed_logins": 0, "logged_in": 1,
-      "num_compromised": 0, "root_shell": 0, "su_attempted": 0, "num_root": 0,
-      "num_file_creations": 0, "num_shells": 0, "num_access_files": 0,
-      "num_outbound_cmds": 0, "is_host_login": 0, "is_guest_login": 0,
-      "count": 1.0, "srv_count": 1.0, "serror_rate": 0.0, "srv_serror_rate": 0.0,
-      "rerror_rate": 0.0, "srv_rerror_rate": 0.0, "same_srv_rate": 1.0,
-      "diff_srv_rate": 0.0, "srv_diff_host_rate": 0.0, "dst_host_count": 1.0,
-      "dst_host_srv_count": 1.0, "dst_host_same_srv_rate": 1.0,
-      "dst_host_diff_srv_rate": 0.0, "dst_host_same_src_port_rate": 1.0,
-      "dst_host_srv_diff_host_rate": 0.0, "dst_host_serror_rate": 0.0,
-      "dst_host_srv_serror_rate": 0.0, "dst_host_rerror_rate": 0.0,
-      "dst_host_srv_rerror_rate": 0.0, "attack": "normal"
-    }
-    ```
-*   **Response Sample:**
-    ```json
-    {
-      "is_anomaly": false,
-      "anomaly_score": 0.3821,
-      "alert": {
-        "alert_id": "ALT-20260720-c48f219d",
-        "timestamp": "2026-07-20T10:15:30.450123",
-        "entity": "tcp_session_from_IP",
-        "anomaly_score": 0.3821,
-        "features_flagged": [],
-        "attack_technique": null,
-        "technique_confidence": null,
-        "response_action": null,
-        "response_status": "normal",
-        "audit_trail": [
-          {
-            "timestamp": "2026-07-20T10:15:30.450123",
-            "agent": "Hero Agent",
-            "action": "Analysis Complete",
-            "notes": "Flow record analyzed. Classification: NORMAL. Score: 0.3821."
-          }
-        ]
-      }
-    }
-    ```
+* **Live Alerts Grid**: Displays real-time connection telemetry and anomaly scores.
+* **Gated Approvals Banner**: Highlights high blast-radius alerts requiring manual validation.
+* **MITRE ATT&CK Mapping**: Showcases semantic attribution candidates and confidence scores.
+* **Threat Mitigation Metrics**: Displays risk priority KPIs, system logs, and audit logs.
+* **Interactive Control Interface**: Allows analysts to execute containment or dismiss alerts.
 
-### 7.2 Attribution Agent (`/attribute`)
-*   **Path:** `POST http://127.0.0.1:8002/attribute`
-*   **Description:** Translates flagged features to descriptive prose and queries ChromaDB vectors. Returns the enriched alert object.
+## API Endpoints Table
 
-### 7.3 Supporting Agent (`/respond`)
-*   **Path:** `POST http://127.0.0.1:8003/respond`
-*   **Description:** Orchestrates the risk mitigation playbook based on asset value and CVE profile.
+| Method | Endpoint | Port | Description |
+|---|---|---|---|
+| `POST` | `/detect` | 8001 | Classifies incoming traffic flows into anomalous or normal. |
+| `POST` | `/attribute` | 8002 | Semantically attributes features to MITRE ATT&CK using vector db. |
+| `POST` | `/respond` | 8003 | Selects mitigation playbooks based on asset profiles and CVEs. |
+| `POST` | `/approve` | 8003 | Manual approval override for gated containment playbooks. |
 
-### 7.4 Supporting Agent Approval Gate (`/approve`)
-*   **Path:** `POST http://127.0.0.1:8003/approve`
-*   **Payload Example:**
-    ```json
-    {
-      "alert": { ... },
-      "approved": true,
-      "analyst_name": "SOC Manager",
-      "notes": "Containment playbook authorized."
-    }
-    ```
+All endpoints ingest JSON payloads validated by standard models and log audits.
+Service communication occurs internally before committing transactions to SQLite.
+API routes allow easy integration of external feeds, log processors, and monitors.
+Each agent supports direct REST queries with detailed schemas.
+Validation errors return standardized HTTP 422 errors detailing schemas.
 
----
+## Tech Stack
 
-## 8. Verification & Test Execution
+* **Frameworks**: Python, FastAPI, and Streamlit.
+* **Machine Learning**: Scikit-Learn (Isolation Forest).
+* **Semantic Search**: ChromaDB (Vector Store), Sentence-Transformers.
+* **LLM Engine**: Google Gemini 1.5 Flash (via Gemini API).
+* **Database**: SQLite (Central alert repository & audits).
+* **Validation**: Pydantic v2 (Strict Schema Validation).
+* **Development**: Pytest (Unit and pipeline integration tests).
 
-The test suite validates integration behavior and JSON schema compliance. To execute tests:
-```bash
-python -m unittest tests/test_pipeline.py
-```
+## Future Work
 
-To view trained model precision and recall figures on the test holdout split:
-```bash
-python -m evaluation.evaluate_hero
-python -m evaluation.evaluate_attribution
-```
-*Results are appended and formatted within `evaluation/results.md`.*
+* **Ingestion Scaling**: Integrate Apache Kafka / RabbitMQ message brokers.
+* **ML Explainability**: Embed SHAP and LIME visual explanation plots.
+* **Active CMDB Integration**: Synchronize inventory dynamically with AWS and VMware.
+* **Automated Rollbacks**: Enable automatic rule reverts on false positive containment.
+* **SIEM Exporting**: Support exporting alerts directly to Splunk or Elastic.
+* **Multi-model Ensembles**: Combine Isolation Forest with Autoencoders and XGBoost.
+* **Continuous Re-training**: Trigger model rebuilds dynamically on feedback loops.
 
----
+## License
 
-## 9. Dashboard Screenshot Placeholders
-
-The dark-themed dashboard provides a complete overview of the platform status.
-*   **Dashboard Alerts Console:** `[Placeholder: docs/screenshots/dashboard_live_alerts.png]`
-*   **Pending SOC Approvals Banner:** `[Placeholder: docs/screenshots/dashboard_pending_approvals.png]`
-*   **MITRE ATT&CK Semantic Sandbox:** `[Placeholder: docs/screenshots/dashboard_threat_intel.png]`
-
----
-
-## 10. Troubleshooting & FAQ
-
-*   **Q: ImportError: DLL load failed while importing _argkmin_classmode**
-    *   *A:* Your operating system has active Application Control Policies (e.g. WDAC or AppLocker) blocking Python from loading scikit-learn's native compiled C++ DLLs from user directory paths. Ensure Python is allowed in your OS policies, or use the pre-built `model.pkl` along with its integrity file `model.pkl.sha256` which are checked into the repository, skipping the local `train_model.py` step.
-*   **Q: The dashboard or agents fail with Security Error on startup.**
-    *   *A:* The `model.pkl` file has been modified or corrupted, causing the SHA-256 integrity check to fail. Re-run `python -m src.hero_agent.train_model` to generate a fresh model and matching `.sha256` hash.
-*   **Q: Can I run this offline without internet access?**
-    *   *A:* Yes. The dashboard image logo has been replaced with local components, and the threat classifier falls back to local vector search via ChromaDB and Sentence-Transformers if `GEMINI_API_KEY` is not present in your environment.
-
----
-
-## 11. Future Work
-
-*   **Distributed Stream Ingestion:** Integrate Apache Kafka or RabbitMQ as an ingestion broker to handle high-throughput network tapping streams instead of direct FastAPI REST invocations.
-*   **ML Explainability Engine:** Incorporate native SHAP or LIME value visualizers on the dashboard to present exact mathematical contributions of flagged features to the Isolation Forest trees.
-*   **Active CMDB Sync:** Connect the Supporting Agent's inventory to active infrastructure services (AWS Systems Manager, ServiceNow, VMware) to dynamically read asset properties and automatically execute containment API calls.
-
----
-
-## 12. Submission Artifacts
-*   **Pitch Presentation:** [PITCH_DECK.pptx](PITCH_DECK.pptx).
-*   **Design Limitations:** [LIMITATIONS.md](docs/LIMITATIONS.md).
-*   **MIT License details:** [LICENSE](LICENSE).
-
----
-
-## 13. Acknowledgements
-We would like to thank the organizers and judges of the **ET AI Hackathon 2026** for providing the opportunity to pitch this agentic cyber resilience solution.
+This project is licensed under the MIT License.
+See the [LICENSE](LICENSE) file for the full text.

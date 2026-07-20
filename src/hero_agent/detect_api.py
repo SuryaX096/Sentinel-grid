@@ -8,6 +8,7 @@ import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from contextlib import asynccontextmanager
+from typing import Union
 from src.common.schema_validator import validate_alert
 from src.hero_agent.feature_engineering import transform_record, get_final_feature_columns
 
@@ -35,9 +36,9 @@ feature_stds = {}
 class FlowRecord(BaseModel):
     # Standard flow record structure representing a connection log
     duration: float
-    protocol_type: str
-    service: str
-    flag: str
+    protocol_type: Union[str, int]
+    service: Union[str, int]
+    flag: Union[str, int]
     src_bytes: float
     dst_bytes: float
     land: int
@@ -77,6 +78,8 @@ class FlowRecord(BaseModel):
     dst_host_srv_rerror_rate: float
     # Optional field representing ground-truth label in replay
     attack: str = "normal"
+
+FlowRecord.model_rebuild()
 
 def load_artifacts():
     global model, threshold, feature_columns, encoding_mappings, feature_means, feature_stds
@@ -132,7 +135,13 @@ def detect_anomaly(flow: FlowRecord):
         
         for col in ["protocol_type", "service", "flag"]:
             val = record_dict.get(col)
-            if col in encoding_mappings:
+            if isinstance(val, int):
+                # Already encoded integer
+                pass
+            elif isinstance(val, str) and val.isdigit():
+                # String representing an integer
+                record_dict[col] = int(val)
+            elif col in encoding_mappings:
                 # Map value, fallback to 0 if unknown category
                 record_dict[col] = encoding_mappings[col].get(val, 0)
                 
@@ -189,11 +198,18 @@ def detect_anomaly(flow: FlowRecord):
         # 5. Construct Alert Object
         now_str = datetime.now(timezone.utc).isoformat()
         
+        protocol_name = str(flow.protocol_type)
+        if isinstance(flow.protocol_type, int) and "protocol_type" in encoding_mappings:
+            for k, v in encoding_mappings["protocol_type"].items():
+                if v == flow.protocol_type:
+                    protocol_name = k
+                    break
+                    
         # Generate schema-compliant alert dict
         alert = {
             "alert_id": f"ALT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",
             "timestamp": now_str,
-            "entity": flow.protocol_type + "_session_from_IP",  # Can be detailed later in pipeline
+            "entity": protocol_name + "_session_from_IP",  # Can be detailed later in pipeline
             "anomaly_score": anomaly_score,
             "features_flagged": features_flagged if is_anomaly else [],
             "attack_technique": None,
