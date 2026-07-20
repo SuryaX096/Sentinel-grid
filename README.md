@@ -1,4 +1,4 @@
-# SentinelMind AI — Cyber Resilience Platform
+# SentinelGrid — Cyber Resilience Platform
 ### Autonomous Multi-Agent Threat Detection, Semantic ATT&CK Attribution, and Gated Incident Response
 **ET AI Hackathon 2026 — Problem Statement 7 Submission**
 
