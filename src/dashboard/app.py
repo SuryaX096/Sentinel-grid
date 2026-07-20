@@ -94,9 +94,8 @@ def load_alerts_from_db():
     if not os.path.exists(DB_PATH):
         return pd.DataFrame()
     try:
-        conn = sqlite3.connect(DB_PATH)
-        df = pd.read_sql_query("SELECT * FROM alerts ORDER BY timestamp DESC", conn)
-        conn.close()
+        with sqlite3.connect(DB_PATH) as conn:
+            df = pd.read_sql_query("SELECT * FROM alerts ORDER BY timestamp DESC", conn)
         return df
     except Exception as e:
         st.error(f"Failed to read database: {e}")
@@ -113,7 +112,14 @@ def load_json_file(path: str, default: dict) -> dict:
             return default
 
 # Sidebar Configuration
-st.sidebar.image("https://img.icons8.com/nolan/96/shield.png", width=80)
+st.sidebar.markdown(
+    """
+    <div style="text-align: left; margin-bottom: -15px; margin-top: -10px;">
+        <span style="font-size: 64px;">🛡️</span>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 st.sidebar.title("SentinelMind AI")
 st.sidebar.markdown("**Agentic Cyber Resilience Platform**")
 st.sidebar.markdown("---")
@@ -315,14 +321,13 @@ with tab1:
                             if response.status_code == 200:
                                 # Save back to local DB
                                 enriched_alert = response.json()
-                                conn = sqlite3.connect(DB_PATH)
-                                cursor = conn.cursor()
-                                cursor.execute(
-                                    "UPDATE alerts SET response_status = ?, audit_trail = ? WHERE alert_id = ?",
-                                    (enriched_alert["response_status"], json.dumps(enriched_alert["audit_trail"]), selected_id)
-                                )
-                                conn.commit()
-                                conn.close()
+                                with sqlite3.connect(DB_PATH) as conn:
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        "UPDATE alerts SET response_status = ?, audit_trail = ? WHERE alert_id = ?",
+                                        (enriched_alert["response_status"], json.dumps(enriched_alert["audit_trail"]), selected_id)
+                                    )
+                                    conn.commit()
                                 st.success("Response updated in local database!")
                                 time.sleep(0.5)
                                 st.rerun()

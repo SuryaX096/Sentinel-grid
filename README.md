@@ -123,6 +123,9 @@ Ensure you have Python 3.9+ installed. Run:
 pip install -r requirements.txt
 ```
 
+> [!TIP]
+> It is recommended to create and activate a Python virtual environment (`python -m venv .venv`) before installing the requirements to ensure a clean, isolated environment.
+
 ### Step 2: Download Dataset & Train the Anomaly Detector (Hero Agent)
 Run the automated pipeline to pull the NSL-KDD dataset, preprocess the splits, and train the scikit-learn Isolation Forest model:
 ```bash

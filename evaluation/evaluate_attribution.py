@@ -1,7 +1,5 @@
 import os
 import sys
-import json
-import numpy as np
 
 # Ensure workspace is on path
 WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -44,6 +42,15 @@ TEST_CASES = [
     {"features": ["su_attempted", "num_access_files"], "expected_id": "T1548", "category": "U2R"},
     {"features": ["num_access_files", "num_shells"], "expected_id": "T1548", "category": "U2R"}
 ]
+
+def pd_timestamp_now_str():
+    # Helper to print timestamp without pandas if not loaded yet
+    try:
+        import pandas as pd
+        return pd.Timestamp.now().strftime('%Y-%m-%d')
+    except Exception:
+        from datetime import datetime
+        return datetime.now().strftime('%Y-%m-%d')
 
 def run_evaluation():
     print("=" * 60)
@@ -121,10 +128,8 @@ def run_evaluation():
     # 3. Save to results.md
     print(f"Writing results to {RESULTS_PATH}...")
     
-    # Compile markdown text
-    results_md = f"""
-## Attribution Agent Threat Classification Evaluation
-
+    # Compile markdown text (body only, header separated to prevent duplication)
+    results_body = f"""
 **Date:** {pd_timestamp_now_str()}
 **Attribution Mode:** Local Semantic Similarity Search (ChromaDB candidate retrieval)
 **Embedding Model:** `all-MiniLM-L6-v2`
@@ -142,7 +147,7 @@ def run_evaluation():
 """
     
     for r in results:
-        results_md += f"| {r['id']} | `{r['features']}` | **{r['expected']}** | **{r['predicted']}** | {r['predicted_name']} | `{r['similarity']:.2%}` | {'🟢 PASS' if r['status'] == 'PASS' else '🔴 FAIL'} |\n"
+        results_body += f"| {r['id']} | `{r['features']}` | **{r['expected']}** | **{r['predicted']}** | {r['predicted_name']} | `{r['similarity']:.2%}` | {'🟢 PASS' if r['status'] == 'PASS' else '🔴 FAIL'} |\n"
         
     # Read existing and append
     results_content = ""
@@ -150,26 +155,20 @@ def run_evaluation():
         with open(RESULTS_PATH, "r", encoding="utf-8") as f:
             results_content = f.read()
             
+    header = "## Attribution Agent Threat Classification Evaluation"
+    full_section = f"\n{header}\n" + results_body.strip() + "\n"
+            
     # Check if section exists and replace, or append
-    if "## Attribution Agent Threat Classification Evaluation" in results_content:
-        parts = results_content.split("## Attribution Agent Threat Classification Evaluation")
+    if header in results_content:
+        parts = results_content.split(header)
         post_part = parts[1].split("## ")[1] if len(parts[1].split("## ")) > 1 else ""
-        new_content = parts[0] + "## Attribution Agent Threat Classification Evaluation" + results_md + (f"\n## {post_part}" if post_part else "")
+        new_content = parts[0] + full_section.strip() + "\n\n" + (f"## {post_part}" if post_part else "")
     else:
-        new_content = results_content + "\n" + "## Attribution Agent Threat Classification Evaluation" + results_md
+        new_content = results_content.strip() + "\n\n" + full_section.strip() + "\n"
         
     with open(RESULTS_PATH, "w", encoding="utf-8") as f:
         f.write(new_content)
     print("Attribution evaluation output written successfully.")
-
-def pd_timestamp_now_str():
-    # Helper to print timestamp without pandas if not loaded yet
-    try:
-        import pandas as pd
-        return pd.Timestamp.now().strftime('%Y-%m-%d')
-    except Exception:
-        from datetime import datetime
-        return datetime.now().strftime('%Y-%m-%d')
 
 if __name__ == "__main__":
     run_evaluation()

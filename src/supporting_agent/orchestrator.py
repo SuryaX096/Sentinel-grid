@@ -1,5 +1,6 @@
 import os
 import json
+import copy
 from datetime import datetime, timezone
 
 # Define paths
@@ -95,7 +96,7 @@ class Orchestrator:
         Appends a detailed log to the audit trail.
         """
         # Create a deep copy
-        alert_out = alert.copy()
+        alert_out = copy.deepcopy(alert)
         
         entity = alert_out["entity"]
         anomaly_score = alert_out["anomaly_score"]

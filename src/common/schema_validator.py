@@ -1,6 +1,3 @@
-import json
-from datetime import datetime
-
 def validate_alert(alert_dict: dict) -> bool:
     """
     Validates a dictionary against the alert schema requirements.

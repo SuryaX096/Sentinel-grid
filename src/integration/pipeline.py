@@ -18,55 +18,58 @@ def init_db():
     """
     Initializes the SQLite database to store pipeline alerts.
     """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS alerts (
-            alert_id TEXT PRIMARY KEY,
-            timestamp TEXT,
-            entity TEXT,
-            anomaly_score REAL,
-            features_flagged TEXT,
-            attack_technique TEXT,
-            technique_confidence REAL,
-            response_action TEXT,
-            response_status TEXT,
-            audit_trail TEXT
-        )
-    """)
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS alerts (
+                alert_id TEXT PRIMARY KEY,
+                timestamp TEXT,
+                entity TEXT,
+                anomaly_score REAL,
+                features_flagged TEXT,
+                attack_technique TEXT,
+                technique_confidence REAL,
+                response_action TEXT,
+                response_status TEXT,
+                audit_trail TEXT
+            )
+        """)
+        conn.commit()
+
+# Initialize DB once on module load
+try:
+    init_db()
+except Exception as e:
+    print(f"WARNING: Database initialization failed: {e}")
 
 def save_alert_to_db(alert: dict):
     """
     Saves or updates an alert in the SQLite database.
     """
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
     # Convert lists/dicts to JSON strings for SQLite storage
     features_flagged_str = json.dumps(alert.get("features_flagged", []))
     audit_trail_str = json.dumps(alert.get("audit_trail", []))
     
-    cursor.execute("""
-        INSERT OR REPLACE INTO alerts (
-            alert_id, timestamp, entity, anomaly_score, features_flagged,
-            attack_technique, technique_confidence, response_action, response_status, audit_trail
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        alert["alert_id"],
-        alert["timestamp"],
-        alert["entity"],
-        float(alert["anomaly_score"]),
-        features_flagged_str,
-        alert.get("attack_technique"),
-        float(alert["technique_confidence"]) if alert.get("technique_confidence") is not None else None,
-        alert.get("response_action"),
-        alert["response_status"],
-        audit_trail_str
-    ))
-    conn.commit()
-    conn.close()
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT OR REPLACE INTO alerts (
+                alert_id, timestamp, entity, anomaly_score, features_flagged,
+                attack_technique, technique_confidence, response_action, response_status, audit_trail
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            alert["alert_id"],
+            alert["timestamp"],
+            alert["entity"],
+            float(alert["anomaly_score"]),
+            features_flagged_str,
+            alert.get("attack_technique"),
+            float(alert["technique_confidence"]) if alert.get("technique_confidence") is not None else None,
+            alert.get("response_action"),
+            alert["response_status"],
+            audit_trail_str
+        ))
+        conn.commit()
 
 def process_flow_record(flow_record: dict) -> dict:
     """
@@ -76,9 +79,6 @@ def process_flow_record(flow_record: dict) -> dict:
     3. Supporting Agent (plans response playbook)
     Stores results in SQLite database.
     """
-    # Initialize DB on execution
-    init_db()
-    
     try:
         # Step 1: Detect Anomaly (Hero Agent)
         # Note: If API is offline, requests will raise a ConnectionError which we handle
