@@ -44,17 +44,18 @@ st.markdown("""
     
     /* Custom Card Design */
     .metric-card {
-        background-color: #1e293b;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
         border: 1px solid #334155;
         border-radius: 12px;
-        padding: 20px;
+        padding: 22px;
         text-align: center;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        transition: transform 0.2s;
+        box-shadow: 0 4px 20px 0 rgba(0,0,0,0.25);
+        transition: all 0.3s ease;
     }
     .metric-card:hover {
-        transform: translateY(-2px);
-        border-color: #0ea5e9;
+        transform: translateY(-4px);
+        border-color: #38bdf8;
+        box-shadow: 0 8px 30px 0 rgba(56, 189, 248, 0.15);
     }
     .metric-card h4 {
         margin: 0;
@@ -68,6 +69,28 @@ st.markdown("""
         font-size: 28px;
         font-weight: 700;
         color: #f8fafc;
+    }
+    
+    /* Empty State Styling */
+    .empty-state-card {
+        background-color: #111827;
+        border: 1px dashed #475569;
+        border-radius: 12px;
+        padding: 50px 20px;
+        text-align: center;
+        margin: 20px 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .empty-state-card h3 {
+        margin-top: 15px;
+        color: #94a3b8 !important;
+        font-size: 20px;
+    }
+    .empty-state-card p {
+        color: #64748b;
+        font-size: 14px;
+        margin-top: 5px;
+        margin-bottom: 20px;
     }
     
     /* Critical Alert Warning */
@@ -181,8 +204,15 @@ tab1, tab2, tab3 = st.tabs(["🔒 Live Alerts & SOC Approvals", "📂 Playbooks 
 # --- TAB 1: LIVE ALERTS AND APPROVALS ---
 with tab1:
     if df_alerts.empty:
-        st.info("No flow logs processed yet. Run the Traffic Replay Simulator to stream connections into the pipeline.")
-        st.code("python -m src.integration.replay_demo", language="bash")
+        st.markdown("""
+        <div class="empty-state-card">
+            <div style="font-size: 64px; margin-bottom: 10px;">📡</div>
+            <h3>SOC Live Threat Feed Idle</h3>
+            <p>No active network connection flows have been ingested by the pipeline yet.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        st.info("To begin streaming simulated traffic and testing agent responses, execute:")
+        st.code("python -m src.integration.replay_demo --count 30 --interval 1.5", language="bash")
     else:
         # Create Split columns: Left is Alert Feed, Right is Interactive Approval Panel
         col_feed, col_action = st.columns([2, 1])
