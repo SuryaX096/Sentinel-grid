@@ -98,6 +98,17 @@ def train_anomaly_detector():
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(model_metadata, f)
         
+    # Generate SHA-256 integrity hash for safer deserialization
+    import hashlib
+    sha256_hash = hashlib.sha256()
+    with open(MODEL_PATH, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    hash_path = MODEL_PATH + ".sha256"
+    with open(hash_path, "w", encoding="utf-8") as f:
+        f.write(sha256_hash.hexdigest())
+    print(f"Model integrity checksum written to {hash_path}")
+        
     print("Training process completed.")
 
 if __name__ == "__main__":

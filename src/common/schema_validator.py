@@ -33,6 +33,8 @@ def validate_alert(alert_dict: dict) -> bool:
         
     if not isinstance(alert_dict["anomaly_score"], (int, float)):
         raise ValueError(f"Validation Error: 'anomaly_score' must be a number, got {type(alert_dict['anomaly_score']).__name__}")
+    if not (0.0 <= float(alert_dict["anomaly_score"]) <= 1.0):
+        raise ValueError(f"Validation Error: 'anomaly_score' must be between 0.0 and 1.0, got {alert_dict['anomaly_score']}")
         
     if not isinstance(alert_dict["features_flagged"], list):
         raise ValueError(f"Validation Error: 'features_flagged' must be a list, got {type(alert_dict['features_flagged']).__name__}")
@@ -44,14 +46,20 @@ def validate_alert(alert_dict: dict) -> bool:
     if alert_dict["attack_technique"] is not None and not isinstance(alert_dict["attack_technique"], str):
         raise ValueError(f"Validation Error: 'attack_technique' must be a string or None")
         
-    if alert_dict["technique_confidence"] is not None and not isinstance(alert_dict["technique_confidence"], (int, float)):
-        raise ValueError(f"Validation Error: 'technique_confidence' must be a number or None")
+    if alert_dict["technique_confidence"] is not None:
+        if not isinstance(alert_dict["technique_confidence"], (int, float)):
+            raise ValueError(f"Validation Error: 'technique_confidence' must be a number or None")
+        if not (0.0 <= float(alert_dict["technique_confidence"]) <= 1.0):
+            raise ValueError(f"Validation Error: 'technique_confidence' must be between 0.0 and 1.0, got {alert_dict['technique_confidence']}")
         
     if alert_dict["response_action"] is not None and not isinstance(alert_dict["response_action"], str):
         raise ValueError(f"Validation Error: 'response_action' must be a string or None")
         
     if not isinstance(alert_dict["response_status"], str):
         raise ValueError(f"Validation Error: 'response_status' must be a string, got {type(alert_dict['response_status']).__name__}")
+    allowed_statuses = ["normal", "resolved", "executed", "pending_approval", "pipeline_error", "pending", "flagged", "dismissed"]
+    if alert_dict["response_status"] not in allowed_statuses:
+        raise ValueError(f"Validation Error: 'response_status' must be one of {allowed_statuses}, got '{alert_dict['response_status']}'")
         
     if not isinstance(alert_dict["audit_trail"], list):
         raise ValueError(f"Validation Error: 'audit_trail' must be a list, got {type(alert_dict['audit_trail']).__name__}")

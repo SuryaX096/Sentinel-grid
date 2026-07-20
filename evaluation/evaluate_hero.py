@@ -21,8 +21,24 @@ def evaluate_hero_agent():
         raise FileNotFoundError(f"Trained model not found at {MODEL_PATH}. Run training first.")
     if not os.path.exists(TEST_HOLDOUT_PATH):
         raise FileNotFoundError(f"Test holdout dataset not found at {TEST_HOLDOUT_PATH}. Run data prep first.")
-        
     # Load model and metadata
+    hash_path = MODEL_PATH + ".sha256"
+    if not os.path.exists(hash_path):
+        raise RuntimeError(f"Security Alert: Checksum file not found at {hash_path}. Refusing to load model pickle file.")
+        
+    import hashlib
+    sha256_hash = hashlib.sha256()
+    with open(MODEL_PATH, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    actual_hash = sha256_hash.hexdigest()
+    
+    with open(hash_path, "r", encoding="utf-8") as f:
+        expected_hash = f.read().strip()
+        
+    if actual_hash != expected_hash:
+        raise RuntimeError("Security Alert: Model pickle file integrity verification failed! File may have been tampered with.")
+        
     with open(MODEL_PATH, "rb") as f:
         artifacts = pickle.load(f)
         clf = artifacts["model"]

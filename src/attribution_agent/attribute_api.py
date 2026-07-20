@@ -153,7 +153,7 @@ def attribute_alert(alert: AlertPayload):
     
     # 1. Skip attribution if it's not an anomaly
     if alert.response_status == "normal" or not alert.features_flagged:
-        alert_dict = alert.dict()
+        alert_dict = alert.model_dump()
         alert_dict["attack_technique"] = "None"
         alert_dict["technique_confidence"] = 0.0
         return alert_dict
@@ -198,7 +198,7 @@ def attribute_alert(alert: AlertPayload):
                 explanation = f"Attributed via local vector similarity (ChromaDB candidate search). Semantic similarity: {confidence:.1%}."
 
         # 5. Enrich Alert object
-        alert_dict = alert.dict()
+        alert_dict = alert.model_dump()
         alert_dict["attack_technique"] = f"{technique_id}: {technique_name}"
         alert_dict["technique_confidence"] = float(confidence)
         
@@ -216,7 +216,8 @@ def attribute_alert(alert: AlertPayload):
         return alert_dict
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Attribution failed: {str(e)}")
+        print(f"Attribution failed: {e}")
+        raise HTTPException(status_code=500, detail="Attribution failed due to an internal processing error.")
 
 if __name__ == "__main__":
     import uvicorn

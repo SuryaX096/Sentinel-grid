@@ -30,21 +30,22 @@ class ApprovalPayload(BaseModel):
 @app.post("/respond")
 def plan_mitigation(alert: AlertPayload):
     try:
-        alert_dict = alert.dict()
+        alert_dict = alert.model_dump()
         # Run orchestration
         enriched_alert = orchestrator.orchestrate_response(alert_dict)
         # Validate output schema
         validate_alert(enriched_alert)
         return enriched_alert
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Orchestration failed: {str(e)}")
+        print(f"Orchestration failed: {e}")
+        raise HTTPException(status_code=400, detail="Orchestration failed due to an internal processing error.")
 
 @app.post("/approve")
 def approve_mitigation(payload: ApprovalPayload):
-    alert_dict = payload.alert.dict()
+    alert_dict = payload.alert.model_dump()
     
     if alert_dict["response_status"] != "pending_approval":
-        raise HTTPException(status_code=400, detail=f"Alert status is '{alert_dict['response_status']}', not 'pending_approval'.")
+        raise HTTPException(status_code=400, detail="Alert status is invalid for approval.")
         
     now_str = datetime.now(timezone.utc).isoformat()
     

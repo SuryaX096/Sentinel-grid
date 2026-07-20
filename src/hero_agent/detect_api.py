@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from contextlib import asynccontextmanager
 from src.common.schema_validator import validate_alert
 from src.hero_agent.feature_engineering import transform_record, get_final_feature_columns
 
@@ -15,7 +16,13 @@ WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".
 MODEL_PATH = os.path.join(WORKSPACE_DIR, "src", "hero_agent", "model.pkl")
 METADATA_PATH = os.path.join(WORKSPACE_DIR, "src", "hero_agent", "metadata.json")
 
-app = FastAPI(title="Hero Agent - Anomaly Detection API")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load model and encoding metadata at startup
+    load_artifacts()
+    yield
+
+app = FastAPI(title="Hero Agent - Anomaly Detection API", lifespan=lifespan)
 
 # Global variables for model state
 model = None
@@ -71,7 +78,6 @@ class FlowRecord(BaseModel):
     # Optional field representing ground-truth label in replay
     attack: str = "normal"
 
-@app.on_event("startup")
 def load_artifacts():
     global model, threshold, feature_columns, encoding_mappings, feature_means, feature_stds
     
@@ -86,6 +92,24 @@ def load_artifacts():
     if not os.path.exists(MODEL_PATH):
         print(f"WARNING: Model artifact not found at {MODEL_PATH}. API starting in uninitialized/mock mode.")
         return
+        
+    # Verify SHA-256 integrity hash before unpickling
+    hash_path = MODEL_PATH + ".sha256"
+    if not os.path.exists(hash_path):
+        raise RuntimeError(f"Security Alert: Checksum file not found at {hash_path}. Refusing to load model pickle file.")
+        
+    import hashlib
+    sha256_hash = hashlib.sha256()
+    with open(MODEL_PATH, "rb") as f:
+        for byte_block in iter(lambda: f.read(4096), b""):
+            sha256_hash.update(byte_block)
+    actual_hash = sha256_hash.hexdigest()
+    
+    with open(hash_path, "r", encoding="utf-8") as f:
+        expected_hash = f.read().strip()
+        
+    if actual_hash != expected_hash:
+        raise RuntimeError("Security Alert: Model pickle file integrity verification failed! File may have been tampered with.")
         
     with open(MODEL_PATH, "rb") as f:
         artifacts = pickle.load(f)
@@ -102,101 +126,105 @@ def load_artifacts():
 def detect_anomaly(flow: FlowRecord):
     global model, threshold, feature_columns, encoding_mappings, feature_means, feature_stds
     
-    # 1. Map categoricals using encoding mappings
-    record_dict = flow.dict()
-    
-    for col in ["protocol_type", "service", "flag"]:
-        val = record_dict.get(col)
-        if col in encoding_mappings:
-            # Map value, fallback to 0 if unknown category
-            record_dict[col] = encoding_mappings[col].get(val, 0)
-            
-    # 2. Engineer features for single record
-    feat_dict = transform_record(record_dict)
-    
-    # 3. Create prediction matrix (1, N) in correct column order
-    if model is None:
-        # Fallback Mock Mode: if model not trained yet, simulate detection
-        anomaly_score = 0.45
-        if flow.attack != "normal":
-            anomaly_score = 0.85
-        is_anomaly = anomaly_score > threshold
-    else:
-        # Construct feature vector
-        vector = [feat_dict.get(c, 0.0) for c in feature_columns]
-        X = np.array([vector])
+    try:
+        # 1. Map categoricals using encoding mappings
+        record_dict = flow.model_dump()
         
-        # Isolation Forest score_samples (opposite of anomaly score, negating gives positive score)
-        raw_score = model.score_samples(X)[0]
-        anomaly_score = round(float(-raw_score), 4)
-        is_anomaly = anomaly_score > threshold
-
-    # 4. Compile flagged features using Z-score outlier detection relative to baseline
-    features_flagged = []
-    if is_anomaly:
-        z_scores = {}
-        for col in feature_columns:
-            val = float(feat_dict.get(col, 0.0))
-            mean = feature_means.get(col, 0.0)
-            std = feature_stds.get(col, 1.0)
-            if std > 0.0001:
-                z = abs(val - mean) / std
-                z_scores[col] = z
+        for col in ["protocol_type", "service", "flag"]:
+            val = record_dict.get(col)
+            if col in encoding_mappings:
+                # Map value, fallback to 0 if unknown category
+                record_dict[col] = encoding_mappings[col].get(val, 0)
                 
-        # Flag features with Z-score > 2.5
-        features_flagged = [col for col, z in z_scores.items() if z > 2.5]
+        # 2. Engineer features for single record
+        feat_dict = transform_record(record_dict)
         
-        # Fallback if no feature stands out: take top contributors (up to 2)
-        if not features_flagged and z_scores:
-            sorted_feats = sorted(z_scores.items(), key=lambda item: item[1], reverse=True)
-            features_flagged = [f[0] for f in sorted_feats[:2]]
+        # 3. Create prediction matrix (1, N) in correct column order
+        if model is None:
+            # Fallback Mock Mode: if model not trained yet, simulate detection
+            anomaly_score = 0.45
+            if flow.attack != "normal":
+                anomaly_score = 0.85
+            is_anomaly = anomaly_score > threshold
+        else:
+            # Construct feature vector
+            vector = [feat_dict.get(c, 0.0) for c in feature_columns]
+            X = np.array([vector])
             
-        # Map engineered names back to raw names for cleaner UX
-        rename_map = {
-            "log_duration": "duration",
-            "log_src_bytes": "src_bytes",
-            "log_dst_bytes": "dst_bytes",
-            "src_dst_ratio": "src_bytes/dst_bytes ratio",
-            "count_srv_ratio": "connection frequency ratio"
-        }
-        features_flagged = [rename_map.get(f, f) for f in features_flagged]
-
-    # 5. Construct Alert Object
-    now_str = datetime.now(timezone.utc).isoformat()
+            # Isolation Forest score_samples (opposite of anomaly score, negating gives positive score)
+            raw_score = model.score_samples(X)[0]
+            anomaly_score = round(float(-raw_score), 4)
+            is_anomaly = anomaly_score > threshold
     
-    # Generate schema-compliant alert dict
-    alert = {
-        "alert_id": f"ALT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",
-        "timestamp": now_str,
-        "entity": flow.protocol_type + "_session_from_IP",  # Can be detailed later in pipeline
-        "anomaly_score": anomaly_score,
-        "features_flagged": features_flagged if is_anomaly else [],
-        "attack_technique": None,
-        "technique_confidence": None,
-        "response_action": None,
-        "response_status": "flagged" if is_anomaly else "normal",
-        "audit_trail": [
-            {
-                "timestamp": now_str,
-                "agent": "Hero Agent",
-                "action": "Analysis Complete",
-                "notes": f"Flow record analyzed. Classification: {'ANOMALY' if is_anomaly else 'NORMAL'}. Score: {anomaly_score:.4f}."
+        # 4. Compile flagged features using Z-score outlier detection relative to baseline
+        features_flagged = []
+        if is_anomaly:
+            z_scores = {}
+            for col in feature_columns:
+                val = float(feat_dict.get(col, 0.0))
+                mean = feature_means.get(col, 0.0)
+                std = feature_stds.get(col, 1.0)
+                if std > 0.0001:
+                    z = abs(val - mean) / std
+                    z_scores[col] = z
+                    
+            # Flag features with Z-score > 2.5
+            features_flagged = [col for col, z in z_scores.items() if z > 2.5]
+            
+            # Fallback if no feature stands out: take top contributors (up to 2)
+            if not features_flagged and z_scores:
+                sorted_feats = sorted(z_scores.items(), key=lambda item: item[1], reverse=True)
+                features_flagged = [f[0] for f in sorted_feats[:2]]
+                
+            # Map engineered names back to raw names for cleaner UX
+            rename_map = {
+                "log_duration": "duration",
+                "log_src_bytes": "src_bytes",
+                "log_dst_bytes": "dst_bytes",
+                "src_dst_ratio": "src_bytes/dst_bytes ratio",
+                "count_srv_ratio": "connection frequency ratio"
             }
-        ]
-    }
+            features_flagged = [rename_map.get(f, f) for f in features_flagged]
     
-    # Add anomaly features to notes if present
-    if is_anomaly:
-        alert["audit_trail"][0]["notes"] += f" Flagged features: {', '.join(features_flagged)}."
+        # 5. Construct Alert Object
+        now_str = datetime.now(timezone.utc).isoformat()
         
-    # Validate alert structure
-    validate_alert(alert)
-    
-    return {
-        "is_anomaly": is_anomaly,
-        "anomaly_score": anomaly_score,
-        "alert": alert
-    }
+        # Generate schema-compliant alert dict
+        alert = {
+            "alert_id": f"ALT-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{str(uuid.uuid4())[:8]}",
+            "timestamp": now_str,
+            "entity": flow.protocol_type + "_session_from_IP",  # Can be detailed later in pipeline
+            "anomaly_score": anomaly_score,
+            "features_flagged": features_flagged if is_anomaly else [],
+            "attack_technique": None,
+            "technique_confidence": None,
+            "response_action": None,
+            "response_status": "flagged" if is_anomaly else "normal",
+            "audit_trail": [
+                {
+                    "timestamp": now_str,
+                    "agent": "Hero Agent",
+                    "action": "Analysis Complete",
+                    "notes": f"Flow record analyzed. Classification: {'ANOMALY' if is_anomaly else 'NORMAL'}. Score: {anomaly_score:.4f}."
+                }
+            ]
+        }
+        
+        # Add anomaly features to notes if present
+        if is_anomaly:
+            alert["audit_trail"][0]["notes"] += f" Flagged features: {', '.join(features_flagged)}."
+            
+        # Validate alert structure
+        validate_alert(alert)
+        
+        return {
+            "is_anomaly": is_anomaly,
+            "anomaly_score": anomaly_score,
+            "alert": alert
+        }
+    except Exception as e:
+        print(f"Error in detect_anomaly: {e}")
+        raise HTTPException(status_code=500, detail="Alert generation failed due to an internal processing error.")
 
 if __name__ == "__main__":
     import uvicorn
