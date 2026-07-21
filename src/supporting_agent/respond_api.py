@@ -20,7 +20,7 @@ class AlertPayload(BaseModel):
     attack_technique: Optional[str] = None
     technique_confidence: Optional[float] = None
     response_action: Optional[str] = None
-    response_status: str
+    response_status: str = "pending"
     audit_trail: list
 
 class ApprovalPayload(BaseModel):
@@ -53,7 +53,7 @@ def approve_mitigation(payload: ApprovalPayload):
     
     if payload.approved:
         action_name = alert_dict["response_action"]
-        alert_dict["response_status"] = "executed"
+        alert_dict["response_status"] = "pending_approval"
         audit_note = f"Action Approved: Playbook '{action_name}' executed. Decision by {payload.analyst_name}. Rationale: {payload.notes}."
         action_title = f"Manual Approval: {action_name.upper()}"
     else:

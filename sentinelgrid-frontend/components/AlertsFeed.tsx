@@ -1,7 +1,7 @@
 "use client";
 import { useAlerts } from "@/hooks/useAlerts";
 import { RISK_BORDER } from "@/lib/constants";
-import { formatTime, cn } from "@/lib/utils";
+import { formatTime, deriveRiskLevel, cn } from "@/lib/utils";
 
 export default function AlertsFeed() {
   const { alerts, isLoading, isError } = useAlerts();
@@ -22,30 +22,36 @@ export default function AlertsFeed() {
         {!isLoading && alerts.length === 0 && (
           <p className="p-4 text-sm text-muted">No alerts yet — start the replay simulator.</p>
         )}
-        {alerts.map((a) => (
-          <div
-            key={a.id}
-            className={cn(
-              "flex items-center justify-between border-l-2 border-b border-border/60 px-4 py-3",
-              RISK_BORDER[a.risk_level]
-            )}
-          >
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-sm">
-                {a.source_ip} → {a.dest_ip}
-              </span>
-              <span className="text-xs text-muted">
-                {a.mitre ? `${a.mitre.technique_id} · ${a.mitre.technique_name}` : "Attribution pending"}
-              </span>
+        {alerts.map((a) => {
+          const risk = deriveRiskLevel(a.anomaly_score);
+          return (
+            <div
+              key={a.alert_id}
+              className={cn(
+                "flex items-center justify-between border-l-2 border-b border-border/60 px-4 py-3",
+                RISK_BORDER[risk]
+              )}
+            >
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-sm">{a.entity}</span>
+                <span className="text-xs text-muted">
+                  {a.attack_technique
+                    ? `${a.attack_technique}${
+                        a.technique_confidence ? ` · ${Math.round(a.technique_confidence * 100)}% confidence` : ""
+                      }`
+                    : "Attribution pending"}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-xs">
+                <span className="font-mono text-muted">{formatTime(a.timestamp)}</span>
+                <span className="font-mono text-muted">score {a.anomaly_score.toFixed(2)}</span>
+                <span className="rounded-full bg-raised px-2 py-1 font-mono uppercase text-muted">
+                  {a.response_status}
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-xs">
-              <span className="font-mono text-muted">{formatTime(a.timestamp)}</span>
-              <span className="rounded-full bg-raised px-2 py-1 font-mono uppercase text-muted">
-                {a.status}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

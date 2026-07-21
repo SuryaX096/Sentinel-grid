@@ -1,29 +1,23 @@
-// These mirror the Pydantic schemas in src/common/ of Cyber-resilience.
-// Adjust field names here if your schema_validator.py differs.
+// Mirrors your actual AlertSchema (src/common) exactly.
 
-export type AlertStatus = "pending" | "approved" | "dismissed" | "auto_resolved";
-export type RiskLevel = "low" | "medium" | "high" | "critical";
-
-export interface MitreAttribution {
-  technique_id: string;      // e.g. "T1071.001"
-  technique_name: string;    // e.g. "Application Layer Protocol"
-  tactic: string;            // e.g. "Command and Control"
-  confidence: number;        // 0-1, from Gemini/ChromaDB validation
+export interface AuditEntry {
+  timestamp: string;
+  agent: string;
+  action: string;
+  notes: string;
 }
 
 export interface Alert {
-  id: string;
-  timestamp: string;         // ISO 8601
-  source_ip: string;
-  dest_ip: string;
-  asset_id: string;
-  anomaly_score: number;     // Isolation Forest output
-  risk_score: number;        // 0-100, computed by supporting_agent
-  risk_level: RiskLevel;
-  mitre: MitreAttribution | null;
-  cve_refs: string[];
-  status: AlertStatus;
-  playbook: string | null;   // recommended containment action
+  alert_id: string;
+  timestamp: string;
+  entity: string;
+  anomaly_score: number;
+  features_flagged: string[];
+  attack_technique: string | null;
+  technique_confidence: number | null;
+  response_action: string | null;
+  response_status: string;
+  audit_trail: AuditEntry[];
 }
 
 export interface Metrics {

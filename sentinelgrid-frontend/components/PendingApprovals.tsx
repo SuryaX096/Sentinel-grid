@@ -7,13 +7,11 @@ export default function PendingApprovals() {
   const { alerts, mutate } = useAlerts("pending");
 
   async function decide(alert: Alert, decision: "approve" | "dismiss") {
-    // Optimistic update: pull this alert out of the pending list immediately,
-    // then reconcile with the server response.
-    mutate(alerts.filter((a) => a.id !== alert.id), false);
+    mutate(alerts.filter((a) => a.alert_id !== alert.alert_id), false);
     await fetch("/api/approve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ alert_id: alert.id, decision }),
+      body: JSON.stringify({ alert_id: alert.alert_id, decision }),
     });
     mutate();
   }
@@ -28,11 +26,11 @@ export default function PendingApprovals() {
       </div>
       {alerts.length === 0 && <p className="p-4 text-sm text-muted">Nothing waiting on you right now.</p>}
       {alerts.map((a) => (
-        <div key={a.id} className="flex items-center justify-between border-b border-border/60 px-4 py-3">
+        <div key={a.alert_id} className="flex items-center justify-between border-b border-border/60 px-4 py-3">
           <div className="flex flex-col gap-0.5">
-            <span className="font-mono text-sm">{a.playbook ?? "Containment action"}</span>
+            <span className="font-mono text-sm">{a.response_action ?? "Containment action"}</span>
             <span className="text-xs text-muted">
-              Asset {a.asset_id} · risk {a.risk_score}/100
+              {a.entity} · anomaly score {a.anomaly_score.toFixed(2)}
             </span>
           </div>
           <div className="flex gap-2">

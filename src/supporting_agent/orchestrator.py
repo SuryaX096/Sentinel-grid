@@ -2,6 +2,7 @@ import os
 import json
 import copy
 from datetime import datetime, timezone
+from sys import audit
 
 # Define paths
 WORKSPACE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -91,68 +92,96 @@ class Orchestrator:
         }
 
     def orchestrate_response(self, alert: dict) -> dict:
-        """
-        Processes an alert and updates it with appropriate mitigation response.
-        Appends a detailed log to the audit trail.
-        """
-        # Create a deep copy
-        alert_out = copy.deepcopy(alert)
-        
-        entity = alert_out["entity"]
-        anomaly_score = alert_out["anomaly_score"]
-        attack_technique = alert_out.get("attack_technique")
-        
-        # Get target asset characteristics
-        asset = self.get_asset_info(entity)
-        criticality = asset["criticality"]
-        known_cves = asset.get("known_cves", [])
-        
-        # Prioritization override: If the asset has active known CVEs, boost the effective anomaly score
-        effective_score = anomaly_score
-        cve_boost_applied = False
-        if known_cves and alert_out["response_status"] != "normal":
-            effective_score = min(1.0, anomaly_score + 0.1)
-            cve_boost_applied = True
-            
-        # If the alert is marked normal, execute the standard log_and_flag play
-        if alert_out["response_status"] == "normal":
-            action = {
-                "name": "log_and_flag",
-                "description": "Log connection.",
-                "blast_radius": "none",
-                "auto_execute": True
-            }
+# Processes an alert and updates it with appropriate mitigation  response.
+#     Appends a detailed log to the audit trail.
+    
+
+    # Create a deep copy
+    alert_out = copy.deepcopy(alert)
+
+    entity = alert_out["entity"]
+    anomaly_score = alert_out["anomaly_score"]
+    attack_technique = alert_out.get("attack_technique")
+
+    # Get target asset characteristics
+    asset = self.get_asset_info(entity)
+    criticality = asset["criticality"]
+    known_cves = asset.get("known_cves", [])
+
+    # Prioritization override: If the asset has active known CVEs, boost the effective anomaly score
+    effective_score = anomaly_score
+    cve_boost_applied = False
+
+    if known_cves and alert_out["response_status"] != "normal":
+        effective_score = min(1.0, anomaly_score + 0.1)
+        cve_boost_applied = True
+
+    # If the alert is marked normal, execute the standard log_and_flag play
+    if alert_out["response_status"] == "normal":
+        action = {
+            "name": "log_and_flag",
+            "description": "Log connection.",
+            "blast_radius": "none",
+            "auto_execute": True
+        }
+    else:
+        # Select the appropriate playbook
+        action = self.select_playbook_action(
+            criticality,
+            effective_score,
+            attack_technique
+        )
+
+        # Debug output
+        print("=" * 60)
+        print("SUPPORTING AGENT DEBUG")
+        print(f"Entity           : {entity}")
+        print(f"Anomaly Score    : {anomaly_score}")
+        print(f"Criticality      : {criticality}")
+        print(f"Effective Score  : {effective_score}")
+        print(f"Selected Action  : {action['name']}")
+        print(f"Blast Radius     : {action['blast_radius']}")
+        print(f"Auto Execute     : {action['auto_execute']}")
+        print("=" * 60)
+
+    action_name = action["name"]
+    auto_execute = action["auto_execute"]
+
+    # Set response fields
+    alert_out["response_action"] = action_name
+
+    if alert_out["response_status"] == "normal":
+        alert_out["response_status"] = "resolved"
+        notes = "Flow classified as normal. Logged for baseline maintenance."
+    else:
+        if auto_execute:
+            alert_out["response_status"] = "executed"
+            notes = (
+                f"Auto-executed playbook '{action_name}'. "
+                f"Blast radius: {action['blast_radius']}."
+            )
         else:
-            action = self.select_playbook_action(criticality, effective_score, attack_technique)
-            
-        action_name = action["name"]
-        auto_execute = action["auto_execute"]
-        
-        # Set response fields
-        alert_out["response_action"] = action_name
-        
-        if alert_out["response_status"] == "normal":
-            alert_out["response_status"] = "resolved"
-            notes = "Flow classified as normal. Logged for baseline maintenance."
-        else:
-            if auto_execute:
-                alert_out["response_status"] = "executed"
-                notes = f"Auto-executed playbook '{action_name}'. Blast radius: {action['blast_radius']}."
-            else:
-                alert_out["response_status"] = "pending_approval"
-                notes = f"Selected playbook '{action_name}' (blast radius: {action['blast_radius']}) requires human verification before execution."
-                
-        # Add CVE context if applicable
-        if cve_boost_applied:
-            notes += f" Prioritized due to active vulnerabilities on asset ({', '.join(known_cves)})."
-            
-        # Append to audit trail
-        now_str = datetime.now(timezone.utc).isoformat()
-        alert_out["audit_trail"].append({
-            "timestamp": now_str,
-            "agent": "Supporting Agent",
-            "action": f"Mitigation Planned: {action_name.upper()}",
-            "notes": notes
-        })
-        
-        return alert_out
+            alert_out["response_status"] = "pending_approval"
+            notes = (
+                f"Selected playbook '{action_name}' "
+                f"(blast radius: {action['blast_radius']}) "
+                f"requires human verification before execution."
+            )
+
+    # Add CVE context if applicable
+    if cve_boost_applied:
+        notes += (
+            f" Prioritized due to active vulnerabilities on asset "
+            f"({', '.join(known_cves)})."
+        )
+
+    # Append to audit trail
+    now_str = datetime.now(timezone.utc).isoformat()
+    alert_out["audit_trail"].append({
+        "timestamp": now_str,
+        "agent": "Supporting Agent",
+        "action": f"Mitigation Planned: {action_name.upper()}",
+        "notes": notes
+    })
+
+    return alert_out

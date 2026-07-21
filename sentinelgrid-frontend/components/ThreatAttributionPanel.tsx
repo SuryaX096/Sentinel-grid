@@ -6,15 +6,13 @@ export default function ThreatAttributionPanel() {
   const { alerts } = useAlerts();
 
   const tally = useMemo(() => {
-    const counts = new Map<string, { name: string; count: number }>();
+    const counts = new Map<string, number>();
     for (const a of alerts) {
-      if (!a.mitre) continue;
-      const key = a.mitre.technique_id;
-      const existing = counts.get(key);
-      counts.set(key, { name: a.mitre.technique_name, count: (existing?.count ?? 0) + 1 });
+      if (!a.attack_technique) continue;
+      counts.set(a.attack_technique, (counts.get(a.attack_technique) ?? 0) + 1);
     }
     return Array.from(counts.entries())
-      .map(([id, v]) => ({ id, ...v }))
+      .map(([technique, count]) => ({ technique, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 6);
   }, [alerts]);
@@ -27,13 +25,10 @@ export default function ThreatAttributionPanel() {
       {tally.length === 0 && <p className="text-sm text-muted">No attributed techniques yet.</p>}
       <div className="flex flex-col gap-2">
         {tally.map((t) => (
-          <div key={t.id} className="flex items-center gap-3">
-            <span className="w-20 shrink-0 font-mono text-xs text-signal-intel">{t.id}</span>
+          <div key={t.technique} className="flex items-center gap-3">
+            <span className="w-28 shrink-0 truncate font-mono text-xs text-signal-intel">{t.technique}</span>
             <div className="h-2 flex-1 overflow-hidden rounded-full bg-raised">
-              <div
-                className="h-full rounded-full bg-signal-intel"
-                style={{ width: `${(t.count / max) * 100}%` }}
-              />
+              <div className="h-full rounded-full bg-signal-intel" style={{ width: `${(t.count / max) * 100}%` }} />
             </div>
             <span className="w-6 shrink-0 text-right font-mono text-xs text-muted">{t.count}</span>
           </div>

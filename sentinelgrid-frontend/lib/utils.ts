@@ -13,3 +13,10 @@ export function formatDuration(seconds: number) {
   if (seconds < 1) return `${Math.round(seconds * 1000)}ms`;
   return `${seconds.toFixed(1)}s`;
 }
+
+export function deriveRiskLevel(anomalyScore: number): "low" | "medium" | "high" | "critical" {
+  if (anomalyScore >= 0.85) return "critical";
+  if (anomalyScore >= 0.65) return "high";
+  if (anomalyScore >= 0.4) return "medium";
+  return "low";
+}
