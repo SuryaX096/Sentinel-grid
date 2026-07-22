@@ -4,7 +4,7 @@ import { Check, X } from "lucide-react";
 import type { Alert } from "@/lib/types";
 
 export default function PendingApprovals() {
-  const { alerts, mutate } = useAlerts("pending");
+  const { alerts, mutate } = useAlerts("pending_approval");
 
   async function decide(alert: Alert, decision: "approve" | "dismiss") {
     mutate(alerts.filter((a) => a.alert_id !== alert.alert_id), false);
